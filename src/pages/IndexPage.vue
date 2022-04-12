@@ -11,79 +11,81 @@
         />
       </q-toolbar>
 
-      <q-toolbar class="add-city" :class="{ active: visibleSearch }" inset>
-        <q-input dense color="grey-3" label-color="white" label="Enter city" />
-        <q-btn class="q-ml-xl q-mt-sm" dense flat icon="add" color="brown-1"
+      <q-toolbar class="add-city" :class="{ active: visibleSearch }">
+        <q-input
+          dense
+          color="grey-3"
+          label-color="white"
+          label="Enter city"
+          v-model="city"
+          @keydown.enter="add"
+        />
+
+        <q-btn
+          @click="add"
+          class="q-ml-xl q-mt-sm"
+          dense
+          flat
+          icon="add"
+          color="brown-1"
           >Add</q-btn
         >
       </q-toolbar>
     </div>
 
     <div class="weather-cards">
-      <div class="weather-cards__col col-lg-6">
+      <div
+        class="weather-cards__col col-lg-6"
+        v-for="ct in cities"
+        :key="ct.name"
+      >
         <q-card class="weather-card">
-          <q-card-section row>
-            <span>Apr 11</span>
-            <div>
-              <span>London</span>,
-              <span>GB </span>
-            </div>
-          </q-card-section>
-          <q-card-section class="row">
-            <img class="weather-card__img" src="../assets/sun.png" />
-            <div>
+          <q-card-section class="text-h6 row justify-between">
+            <div class="column">
               <div>
-                <span>24</span> 
+                <span>{{ ct.month }}</span> <span>{{ ct.day }}</span>
+              </div>
+
+              <div>
+                <span>{{ ct.name }}</span
+                >,
+                <span>{{ ct.country }}</span>
+              </div>
+            </div>
+            <q-card-actions>
+              <q-btn @click="deleteCityCard(ct)" flat style="color: #ff0080"
+                >Remove</q-btn
+              >
+            </q-card-actions>
+          </q-card-section>
+          <q-card-section class="row items-center justify-between">
+            <div class="column text-subtitle2">
+              <img class="weather-card__img q-mb-md" src="../assets/sun.png" />
+              <span>{{ ct.clouds }}</span>
+            </div>
+
+            <div class="column text-h6">
+              <div>
+                <span>{{ ct.temp }}</span>
                 <span> C</span>
               </div>
-              <span>Feels like 14°C</span>
+              <div>
+                <span class="text-subtitle2">Feels like: </span>
+                <span>{{ ct.feelTemp }}</span
+                ><span> C</span>
+              </div>
             </div>
           </q-card-section>
-          <q-card-section>
-            <div class="text-h6">10.3m/s E</div>
-            
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="weather-cards__col col-lg-6">
-        <q-card>
-          <img src="https://cdn.quasar.dev/img/mountains.jpg" />
-
-          <q-card-section>
-            <div class="text-h6">Our Changing Planet</div>
-            <div class="text-subtitle2">by John Doe</div>
-          </q-card-section>
-
-          <q-card-section class="q-pt-none">
-            {{ lorem }}
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="weather-cards__col col-lg-6">
-        <q-card>
-          <img src="https://cdn.quasar.dev/img/mountains.jpg" />
-
-          <q-card-section>
-            <div class="text-h6">Our Changing Planet</div>
-            <div class="text-subtitle2">by John Doe</div>
-          </q-card-section>
-
-          <q-card-section class="q-pt-none">
-            {{ lorem }}
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="weather-cards__col col-lg-6">
-        <q-card>
-          <img src="https://cdn.quasar.dev/img/mountains.jpg" />
-
-          <q-card-section>
-            <div class="text-h6">Our Changing Planet</div>
-            <div class="text-subtitle2">by John Doe</div>
-          </q-card-section>
-
-          <q-card-section class="q-pt-none">
-            {{ lorem }}
+          <q-card-section class="row items-center">
+            <img
+              class="q-mr-md"
+              width="20"
+              height="20"
+              src="../assets/navigation.svg"
+              alt=""
+              :style="{ transform: 'rotate(' + ct.deg + 'deg)' }"
+            />
+            <div class="text-h6">{{ ct.wind }} m/s {{ ct.directWind }}</div>
           </q-card-section>
         </q-card>
       </div>
@@ -92,16 +94,70 @@
 </template>
 
 <script>
-import { defineComponent, ref } from "vue";
+import { defineComponent, ref, reactive } from "vue";
 
 export default defineComponent({
   name: "IndexPage",
 
   setup() {
     const visibleSearch = ref(false);
+    let city = ref("");
+    let cities = reactive([
+      {
+        day: 11,
+        month: "Apr",
+        name: "London",
+        country: "GB",
+        temp: 24,
+        feelTemp: 22,
+        clouds: "Overcast clouds",
+        wind: 10.3,
+        directWind: "E",
+        deg: 180,
+      },
+      {
+        day: 11,
+        month: "Apr",
+        name: "Paris",
+        country: "FR",
+        temp: 12,
+        feelTemp: 10,
+        clouds: "Clear",
+        wind: 8.5,
+        directWind: "W",
+        deg: 50,
+      },
+    ]);
+
+    function add() {
+      const newCity = {
+        day: 11,
+        month: "Apr",
+        name: city.value,
+        country: "RF",
+        temp: 20,
+        feelTemp: 19,
+        clouds: "Clear",
+        wind: 2,
+        directWind: "W",
+        deg: 160,
+      };
+
+      cities.push(newCity);
+      city.value = "";
+    }
+
+    function deleteCityCard(ct) {
+      let idx = cities.indexOf(ct);
+      cities.splice(idx, 1);
+    }
 
     return {
       visibleSearch,
+      city,
+      cities,
+      add,
+      deleteCityCard,
     };
   },
 });
