@@ -9,6 +9,14 @@
           icon="search"
           @click="visibleSearch = !visibleSearch"
         />
+        <q-tooltip
+          class="bg-deep-orange-6"
+          self="top left"
+          no-parent-event
+          v-model="showTooltip"
+        >
+          <div style="font-size: 16px">Please enter a valid city</div>
+        </q-tooltip>
       </q-toolbar>
 
       <q-toolbar class="add-city" :class="{ active: visibleSearch }">
@@ -53,39 +61,49 @@
               </div>
             </div>
             <q-card-actions>
-              <q-btn @click="deleteCityCard(ct)" flat style="color: #ff0080"
+              <q-btn
+                class="btn-remove"
+                @click="deleteCityCard(ct)"
+                flat
+                style="color: #ff0080"
                 >Remove</q-btn
               >
             </q-card-actions>
           </q-card-section>
           <q-card-section class="row items-center justify-between">
             <div class="column text-subtitle2">
-              <img class="weather-card__img q-mb-md" src="../assets/sun.png" />
+              <q-img
+                class="weather-card__img q-mb-md"
+                spinner-color="-deep-orange-6"
+                :src="require(`../assets/${ct.imgUrl}`)"
+              />
               <span>{{ ct.clouds }}</span>
             </div>
 
             <div class="column text-h6">
               <div>
-                <span>{{ ct.temp }}</span>
+                <span>{{ ct.temp }}&deg;</span>
                 <span> C</span>
               </div>
               <div>
                 <span class="text-subtitle2">Feels like: </span>
-                <span>{{ ct.feelTemp }}</span
-                ><span> C</span>
+                <span>{{ ct.feelTemp }}&deg;</span><span> C</span>
               </div>
             </div>
           </q-card-section>
-          <q-card-section class="row items-center">
-            <img
-              class="q-mr-md"
-              width="20"
-              height="20"
-              src="../assets/navigation.svg"
-              alt=""
-              :style="{ transform: 'rotate(' + ct.deg + 'deg)' }"
-            />
-            <div class="text-h6">{{ ct.wind }} m/s {{ ct.directWind }}</div>
+          <q-card-section class="column">
+            <span class="text-subtitle2">Wind:</span>
+            <div class="row items-center">
+              <img
+                class="q-mr-md"
+                width="20"
+                height="20"
+                src="../assets/navigation.svg"
+                alt=""
+                :style="{ transform: 'rotate(' + ct.deg + 'deg)' }"
+              />
+              <div class="text-h6">{{ ct.wind }} m/s</div>
+            </div>
           </q-card-section>
         </q-card>
       </div>
@@ -94,7 +112,7 @@
 </template>
 
 <script>
-import { defineComponent, ref, reactive } from "vue";
+import { defineComponent, ref, reactive, computed } from "vue";
 
 export default defineComponent({
   name: "IndexPage",
@@ -102,49 +120,93 @@ export default defineComponent({
   setup() {
     const visibleSearch = ref(false);
     let city = ref("");
-    let cities = reactive([
-      {
-        day: 11,
-        month: "Apr",
-        name: "London",
-        country: "GB",
-        temp: 24,
-        feelTemp: 22,
-        clouds: "Overcast clouds",
-        wind: 10.3,
-        directWind: "E",
-        deg: 180,
-      },
-      {
-        day: 11,
-        month: "Apr",
-        name: "Paris",
-        country: "FR",
-        temp: 12,
-        feelTemp: 10,
-        clouds: "Clear",
-        wind: 8.5,
-        directWind: "W",
-        deg: 50,
-      },
-    ]);
+    let showTooltip = ref(false);
+
+    let cities = reactive([]);
 
     function add() {
-      const newCity = {
-        day: 11,
-        month: "Apr",
+      if (city.value.length <= 0) {
+        return;
+      }
+      let newCity = {
+        day: "-",
+        month: "-",
         name: city.value,
-        country: "RF",
-        temp: 20,
-        feelTemp: 19,
-        clouds: "Clear",
-        wind: 2,
-        directWind: "W",
-        deg: 160,
+        country: "-",
+        temp: "-",
+        feelTemp: "-",
+        clouds: "-",
+        wind: "-",
+        imgUrl: "sun.png",
+        deg: "-",
       };
 
-      cities.push(newCity);
+      getPosition(newCity);
+
       city.value = "";
+    }
+
+    async function getPosition(newCity) {
+      let apiCoords = `http://api.openweathermap.org/geo/1.0/direct?q=${city.value}&limit=1&appid=`;
+      let responseCoords = await fetch(apiCoords);
+      let responseJsonCoords = await responseCoords.json();
+
+      if (responseJsonCoords.length <= 0) {
+        showTooltip.value = true;
+        setTimeout(() => {
+          showTooltip.value = false;
+        }, 1500);
+        return;
+      }
+      cities.push(newCity);
+      let currentCard = cities[cities.length - 1];
+      currentCard.country = responseJsonCoords[0].country;
+
+      let lat = responseJsonCoords[0].lat;
+      let lon = responseJsonCoords[0].lon;
+
+      let dataTemp = await fetch(
+        `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=`
+      );
+      let dataTempJson = await dataTemp.json();
+
+      console.log(dataTempJson);
+      addDataToCard(currentCard, dataTempJson);
+      addImgSrc(currentCard, dataTempJson);
+    }
+
+    function addImgSrc(currentCard, data) {
+      if (data.weather[0].id >= 200 && data.weather[0].id <= 232) {
+        currentCard.imgUrl = "thunderstorm.png";
+      } else if (data.weather[0].id >= 300 && data.weather[0].id <= 321) {
+        currentCard.imgUrl = "drizzle.png";
+      } else if (data.weather[0].id >= 600 && data.weather[0].id <= 622) {
+        currentCard.imgUrl = "snow.png";
+      } else if (data.weather[0].id >= 500 && data.weather[0].id <= 531) {
+        currentCard.imgUrl = "rain.png";
+      } else if (data.weather[0].id >= 701 && data.weather[0].id <= 781) {
+        currentCard.imgUrl = "clouds.png";
+      } else if (data.weather[0].id >= 801 && data.weather[0].id <= 804) {
+        currentCard.imgUrl = "clouds.png";
+      } else if ((data.weather[0].id = 800)) {
+        currentCard.imgUrl = "sun.png";
+      }
+    }
+
+    function addDataToCard(currentCard, data) {
+      let date = new Date();
+      let day = date.getDate();
+      let month = new Date().toLocaleString("en", { month: "short" });
+      currentCard.day = day;
+      currentCard.month = month;
+      currentCard.name = data.name;
+
+      currentCard.temp = Math.round(data.main.temp);
+      currentCard.feelTemp = Math.round(data.main.feels_like);
+
+      currentCard.clouds = data.weather[0].main;
+      currentCard.wind = data.wind.speed;
+      currentCard.deg = data.wind.deg;
     }
 
     function deleteCityCard(ct) {
@@ -156,6 +218,8 @@ export default defineComponent({
       visibleSearch,
       city,
       cities,
+      showTooltip,
+
       add,
       deleteCityCard,
     };
@@ -202,5 +266,11 @@ export default defineComponent({
     width: 80px;
     height: auto;
   }
+}
+
+.btn-remove {
+  position: absolute;
+  top: 0;
+  right: 0;
 }
 </style>
