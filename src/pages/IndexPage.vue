@@ -17,6 +17,14 @@
         >
           <div style="font-size: 16px">Please enter a valid city</div>
         </q-tooltip>
+        <q-tooltip
+          class="bg-orange-8"
+          self="top left"
+          no-parent-event
+          v-model="showTooltipDuble"
+        >
+          <div style="font-size: 16px">This city already exists.</div>
+        </q-tooltip>
       </q-toolbar>
 
       <q-toolbar class="add-city" :class="{ active: visibleSearch }">
@@ -44,10 +52,10 @@
     <div class="weather-cards">
       <div
         class="weather-cards__col col-lg-6"
-        v-for="ct in cities"
+        v-for="ct in filteredCities()"
         :key="ct.name"
       >
-        <q-card class="weather-card">
+        <q-card class="weather-card" spinner-color="deep-orange-6">
           <q-card-section class="text-h6 row justify-between">
             <div class="column">
               <div>
@@ -74,7 +82,7 @@
             <div class="column text-subtitle2">
               <q-img
                 class="weather-card__img q-mb-md"
-                spinner-color="-deep-orange-6"
+                spinner-color="deep-orange-6"
                 :src="require(`../assets/${ct.imgUrl}`)"
               />
               <span>{{ ct.clouds }}</span>
@@ -91,7 +99,7 @@
               </div>
             </div>
           </q-card-section>
-          <q-card-section class="column">
+          <q-card-section class="column relative">
             <span class="text-subtitle2">Wind:</span>
             <div class="row items-center">
               <img
@@ -100,19 +108,31 @@
                 height="20"
                 src="../assets/navigation.svg"
                 alt=""
-                :style="{ transform: 'rotate(' + ct.deg + 'deg)' }"
+                :style="{ transform: 'rotate(' + (ct.deg + 180 - 45) + 'deg)' }"
               />
               <div class="text-h6">{{ ct.wind }} m/s</div>
             </div>
           </q-card-section>
+          <div class="weather-card__route">
+            <q-btn flat color="grey-1" icon="visibility" @click="goToCard" />
+          </div>
         </q-card>
       </div>
     </div>
+
+    <q-pagination
+      v-model="page"
+      :max="maxPagination"
+      :max-pages="4"
+      :boundary-numbers="false"
+      class="pagination"
+    />
   </q-page>
 </template>
 
 <script>
-import { defineComponent, ref, reactive, computed } from "vue";
+import { defineComponent, ref, reactive, computed, onBeforeMount } from "vue";
+import { useRouter, useRoute } from "vue-router";
 
 export default defineComponent({
   name: "IndexPage",
@@ -121,8 +141,41 @@ export default defineComponent({
     const visibleSearch = ref(false);
     let city = ref("");
     let showTooltip = ref(false);
-
+    let showTooltipDuble = ref(false);
+    let page = ref(1);
     let cities = reactive([]);
+
+    const router = useRouter();
+    const route = useRoute();
+
+    const maxPagination = computed(() => {
+      let max = Math.ceil(cities.length / 3);
+      if (max < 3 && cities.length >= 1) {
+        max = 3;
+      }
+      return max;
+    });
+
+    onBeforeMount(() => {
+      const cityData = localStorage.getItem("cities-list");
+      if (cityData) {
+        let citiesParsed = JSON.parse(cityData);
+        for (let i = 0; i < citiesParsed.length; i++) {
+          cities.push(citiesParsed[i]);
+        }
+      }
+    });
+
+    function filteredCities() {
+      const start = (page.value - 1) * 4;
+      const end = page.value * 4;
+
+      return cities.slice(start, end);
+    }
+
+    function goToCard() {
+      router.push("/cardpage");
+    }
 
     function add() {
       if (city.value.length <= 0) {
@@ -149,6 +202,13 @@ export default defineComponent({
     async function getPosition(newCity) {
       let apiCoords = `http://api.openweathermap.org/geo/1.0/direct?q=${city.value}&limit=1&appid=`;
       let responseCoords = await fetch(apiCoords);
+      if (responseCoords.status >= 401) {
+        showTooltip.value = true;
+        setTimeout(() => {
+          showTooltip.value = false;
+        }, 1500);
+        return;
+      }
       let responseJsonCoords = await responseCoords.json();
 
       if (responseJsonCoords.length <= 0) {
@@ -158,8 +218,9 @@ export default defineComponent({
         }, 1500);
         return;
       }
-      cities.push(newCity);
-      let currentCard = cities[cities.length - 1];
+
+      // cities.push(newCity);
+      let currentCard = newCity;
       currentCard.country = responseJsonCoords[0].country;
 
       let lat = responseJsonCoords[0].lat;
@@ -169,8 +230,18 @@ export default defineComponent({
         `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=`
       );
       let dataTempJson = await dataTemp.json();
+      let findItem = cities.find(function (item) {
+        return item.name === dataTempJson.name;
+      });
 
-      console.log(dataTempJson);
+      if (findItem) {
+        showTooltipDuble.value = true;
+        setTimeout(() => {
+          showTooltipDuble.value = false;
+        }, 1500);
+        return;
+      }
+
       addDataToCard(currentCard, dataTempJson);
       addImgSrc(currentCard, dataTempJson);
     }
@@ -191,9 +262,13 @@ export default defineComponent({
       } else if ((data.weather[0].id = 800)) {
         currentCard.imgUrl = "sun.png";
       }
+
+      localStorage.setItem("cities-list", JSON.stringify(cities));
     }
 
     function addDataToCard(currentCard, data) {
+      cities.push(currentCard);
+
       let date = new Date();
       let day = date.getDate();
       let month = new Date().toLocaleString("en", { month: "short" });
@@ -205,13 +280,16 @@ export default defineComponent({
       currentCard.feelTemp = Math.round(data.main.feels_like);
 
       currentCard.clouds = data.weather[0].main;
-      currentCard.wind = data.wind.speed;
+      currentCard.wind = Math.round(data.wind.speed);
       currentCard.deg = data.wind.deg;
     }
 
     function deleteCityCard(ct) {
+      console.log(cities);
       let idx = cities.indexOf(ct);
       cities.splice(idx, 1);
+      localStorage.setItem("cities-list", JSON.stringify(cities));
+      console.log(cities);
     }
 
     return {
@@ -219,9 +297,15 @@ export default defineComponent({
       city,
       cities,
       showTooltip,
+      showTooltipDuble,
+      page,
+      maxPagination,
 
       add,
       deleteCityCard,
+      filteredCities,
+      onBeforeMount,
+      goToCard,
     };
   },
 });
@@ -246,6 +330,7 @@ export default defineComponent({
   justify-content: flex-start;
   flex-wrap: wrap;
   margin: 0 -10px;
+  min-height: 400px;
 
   &__col {
     flex: 1 1 25%;
@@ -266,11 +351,31 @@ export default defineComponent({
     width: 80px;
     height: auto;
   }
+
+  &__route {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+
+    .q-btn {
+      padding: 10px 20px 20px 14px;
+      background-color: #ffc107;
+      border-top-left-radius: 50% !important;
+    }
+  }
+
+  .relative {
+    position: relative;
+  }
 }
 
 .btn-remove {
   position: absolute;
   top: 0;
   right: 0;
+}
+
+.pagination {
+  justify-content: center;
 }
 </style>
