@@ -52,31 +52,32 @@
     <div class="weather-cards">
       <div
         class="weather-cards__col col-lg-6"
-        v-for="ct in filteredCities()"
+        v-for="ct in filteredCities"
         :key="ct.name"
       >
         <q-card class="weather-card" spinner-color="deep-orange-6">
-          <q-card-section class="text-h6 row justify-between">
+          <q-card-section
+            class="weather-card__header text-h6 row justify-between"
+          >
             <div class="column">
               <div>
                 <span>{{ ct.month }}</span> <span>{{ ct.day }}</span>
               </div>
 
-              <div>
+              <div class="weather-card__city">
                 <span>{{ ct.name }}</span
                 >,
                 <span>{{ ct.country }}</span>
               </div>
             </div>
-            <q-card-actions>
-              <q-btn
-                class="btn-remove"
-                @click="deleteCityCard(ct)"
-                flat
-                style="color: #ff0080"
-                >Remove</q-btn
-              >
-            </q-card-actions>
+
+            <q-btn
+              class="btn-remove"
+              @click="deleteCityCard(ct)"
+              flat
+              style="color: #ff0080"
+              >Remove</q-btn
+            >
           </q-card-section>
           <q-card-section class="row items-center justify-between">
             <div class="column text-subtitle2">
@@ -147,7 +148,7 @@ export default defineComponent({
 
     const router = useRouter();
     const route = useRoute();
-
+    //   Computed //
     const maxPagination = computed(() => {
       let max = Math.ceil(cities.length / 3);
       if (max < 3 && cities.length >= 1) {
@@ -155,6 +156,15 @@ export default defineComponent({
       }
       return max;
     });
+
+    const filteredCities = computed(() => {
+      const start = (page.value - 1) * 4;
+      const end = page.value * 4;
+
+      return cities.slice(start, end);
+    });
+
+    //   / Computed //
 
     onBeforeMount(() => {
       const cityData = localStorage.getItem("cities-list");
@@ -166,12 +176,12 @@ export default defineComponent({
       }
     });
 
-    function filteredCities() {
-      const start = (page.value - 1) * 4;
-      const end = page.value * 4;
+    // function filteredCities() {
+    //   const start = (page.value - 1) * 4;
+    //   const end = page.value * 4;
 
-      return cities.slice(start, end);
-    }
+    //   return cities.slice(start, end);
+    // }
 
     function goToCard() {
       router.push("/cardpage");
@@ -200,7 +210,7 @@ export default defineComponent({
     }
 
     async function getPosition(newCity) {
-      let apiCoords = `http://api.openweathermap.org/geo/1.0/direct?q=${city.value}&limit=1&appid=`;
+      let apiCoords = `http://api.openweathermap.org/geo/1.0/direct?q=${city.value}&limit=1&appid=${process.env.API_KEY}`;
       let responseCoords = await fetch(apiCoords);
       if (responseCoords.status >= 401) {
         showTooltip.value = true;
@@ -227,7 +237,7 @@ export default defineComponent({
       let lon = responseJsonCoords[0].lon;
 
       let dataTemp = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=`
+        `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${process.env.API_KEY}`
       );
       let dataTempJson = await dataTemp.json();
       let findItem = cities.find(function (item) {
@@ -300,10 +310,10 @@ export default defineComponent({
       showTooltipDuble,
       page,
       maxPagination,
+      filteredCities,
 
       add,
       deleteCityCard,
-      filteredCities,
       onBeforeMount,
       goToCard,
     };
@@ -330,7 +340,7 @@ export default defineComponent({
   justify-content: flex-start;
   flex-wrap: wrap;
   margin: 0 -10px;
-  min-height: 400px;
+  margin-bottom: 50px;
 
   &__col {
     flex: 1 1 25%;
@@ -362,6 +372,14 @@ export default defineComponent({
       background-color: #ffc107;
       border-top-left-radius: 50% !important;
     }
+  }
+
+  &__header {
+    padding-bottom: 0;
+  }
+
+  &__city {
+    min-height: 64px;
   }
 
   .relative {
