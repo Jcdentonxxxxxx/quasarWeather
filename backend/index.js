@@ -28,6 +28,13 @@ app.post('/', (req, res) => {
   res.status(200).json('Сервер работает123');
 })
 
+mysqlConnection.query("INSERT usersdb(Email, Password, ActivationLink ) VALUES(131, 131, 131)",
+  function (err, results, fields) {
+
+    console.log(results); // собственно данные
+
+  });
+
 const start = async () => {
 
   try {
@@ -42,7 +49,7 @@ const start = async () => {
     console.log(e);
   }
 }
-
+module.exports = mysqlConnection;
 start();
 
 

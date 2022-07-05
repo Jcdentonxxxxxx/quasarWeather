@@ -1,5 +1,9 @@
-class TokenService {
+const jwt = require('jsonwebtoken');
 
+class TokenService {
+  generateTokens(payload) {
+    const accessToken = jwt.sign(payload, );
+  }
 }
 
 

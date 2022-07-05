@@ -48,3 +48,23 @@ class UseController {
 }
 
 module.exports = new UseController();
+
+
+
+// USE authentication;
+
+// CREATE TABLE UsersDb
+// (
+//     Id INT PRIMARY KEY AUTO_INCREMENT,
+//     Email VARCHAR(100) UNIQUE NOT NULL,
+//     Password VARCHAR(100) NOT NULL,
+//     IsActivated BOOLEAN default 0,
+//     ActivationLink VARCHAR(100)
+// );
+
+// CREATE TABLE TokenDb
+// (
+//     UserId int,
+//     refreshToken VARCHAR(255),
+//     FOREIGN KEY (UserId)  REFERENCES UsersDb (Id)
+// );
