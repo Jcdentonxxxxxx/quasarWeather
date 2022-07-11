@@ -1,27 +1,59 @@
-let mysqlConnection = require('../index');
+const mysql = require('mysql');
 const bcrypt = require('bcrypt');
 const uuid = require('uuid');
 const mailService = require('./mail-service');
+const tokenService = require('./token-service');
+const UserDto = require('../dtos/user-dto');
+
+let mysqlConnection = mysql.createConnection({
+  host: 'localhost',
+  user: 'root',
+  password: '',
+  database: 'authentication',
+  multipleStatements: true
+});
 
 class UserService {
   async registration(email, password) {
-    let checkUser;
-    await mysqlConnection.query(`SELECT Email FROM usersdb WHERE Email = ${email};`,
+    let checkUser = false;
+    mysqlConnection.query(`SELECT Email FROM usersdb WHERE Email = "${email}";`,
       function (err, results, fields) {
-        checkUser = result;
+        if (results[0]) {
+          console.log(results);
+          checkUser = results[0].Email;
+          throw new Error(`Пользователь с почтовым адресом ${email} уже существует`);
+        }
       });
-
-    if (checkUser) {
-      throw new Error(`Пользователь с почтовым адресом ${email} уже существует`)
-    }
 
     const hashPassword = await bcrypt.hash(password, 3);
     const activationLink = uuid.v4();
-    const user = await mysqlConnection.query(`INSERT usersdb(Email, Password, ActivationLink ) VALUES( ${email},  ${hashPassword} ,${activationLink})`,
+
+
+    mysqlConnection.query(`INSERT usersdb(Email, Password, ActivationLink ) VALUES( '${email}', '${hashPassword}', '${activationLink}')`,
       function (err, results, fields) {
 
       });
-    await mailService.sendActivationMail(email, activationLink);
+    // // await mailService.sendActivationMail(email, activationLink);
+
+    let savedId;
+    mysqlConnection.query(`SELECT Id FROM usersdb WHERE Email = "${email}";`,
+      function (err, results, fields) {
+        savedId = results[0].Id;
+      });
+
+    const userDto = new UserDto({
+      email: email,
+      id: savedId,
+      isActivated: true
+    });
+
+    console.log(userDto);
+    // const tokens = tokenService.generateTokens({...userDto});
+    // await tokenService.saveToken(userDto.id, tokens.refreshToken);
+    return {
+      // ...tokens,
+      user: userDto
+    }
   }
 }
 
