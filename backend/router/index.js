@@ -8,5 +8,8 @@ router.post('/logout', userController.logout);
 router.get('/activate/:link', userController.activate);
 router.get('/refresh', userController.refresh);
 router.get('/users', userController.getUsers);
+router.get('/', (request, response) => {
+  return response.send("Server run");
+});
 
 module.exports = router;
