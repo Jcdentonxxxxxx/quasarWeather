@@ -1,16 +1,11 @@
 const Sequelize = require("sequelize");
 const dbConfig = require('../config/database.js');
 
-
+const User = require('../models/User');
 
 const connection = new Sequelize(dbConfig);
 
-try {
-  connection.authenticate();
-  console.log('Connection success');
-} catch (error) {
-  console.error('blyat', error);
-}
+User.init(connection);
 
 
 module.exports = connection;
