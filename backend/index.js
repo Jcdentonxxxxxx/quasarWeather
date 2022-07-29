@@ -5,7 +5,7 @@ const bodyparser = require('body-parser');
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const router = require('./router/index');
+const router = require('./router/index.js');
 
 require('./database');
 
