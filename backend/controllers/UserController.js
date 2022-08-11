@@ -1,6 +1,15 @@
-const bodyParser = require('body-parser');
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
+
+const jwt = require('jsonwebtoken');
+
+const authConfig = require('../config/auth');
+
+function generateToken(params = {}) {
+  return jwt.sign(params, authConfig.secret, {
+    expiresIn: 78300,
+  });
+}
 
 module.exports = {
   async login(req, res) {
@@ -40,10 +49,15 @@ module.exports = {
     });
     user.password = undefined;
 
+    const token = generateToken({
+      id: user.id
+    });
+
     return res.status(200).send({
       status: 1,
       message: 'Пользователь успешно авторизовался!',
-      user
+      user,
+      token
     });
   },
 
@@ -72,10 +86,15 @@ module.exports = {
       email,
     });
 
+    const token = generateToken({
+      id: user.id
+    });
+
     return res.status(200).send({
       status: 1,
-      message: "Пользователь успешно зарегестрирован!",
-      user
+      message: "Пользователь успешно зарегистрирован!",
+      user,
+      token
     });
   },
 
